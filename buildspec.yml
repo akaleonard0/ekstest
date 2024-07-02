@@ -1,0 +1,24 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${REPOSITORY_URI}
+      - echo Build started on `date`
+  build:
+    commands:
+      - echo Build the Docker image...
+      - docker build -t html-app .
+      - docker tag html-app:latest ${REPOSITORY_URI}:latest
+      - echo Pushing the Docker image...
+      - docker push ${REPOSITORY_URI}:latest
+  post_build:
+    commands:
+      - echo Create Kubernetes deployment and service...
+      - echo $KUBECONFIG | base64 --decode > /root/.kube/config
+      - kubectl apply -f k8s/deployment.yaml
+      - kubectl apply -f k8s/service.yaml
+artifacts:
+  files:
+    - '**/*'
